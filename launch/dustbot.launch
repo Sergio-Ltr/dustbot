@@ -1,0 +1,4 @@
+<launch>
+    <node name="world_node" pkg="dustbot"  type="world.py" output="screen"/> 
+    <node name="robot_node" pkg="dustbot"  type="robot.py" output="screen" />
+</launch>
