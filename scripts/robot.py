@@ -2,7 +2,7 @@
 
 import rospy
 
-from dustbot.msg import Position, Garbage
+from dustbot.msg import Position
 from dustbot.srv import SetDirection, LoadGarbage
 
 current_pos = (0,0)
@@ -58,7 +58,7 @@ def initializer():
     rospy.init_node("robot")
 
     rospy.Subscriber("global_position", Position, pos_callback)
-    rospy.Subscriber("current_destination", Garbage, dest_callback)
+    rospy.Subscriber("current_destination", Position, dest_callback)
     
     #@Todo implement the move service.
     rospy.spin()

@@ -1,15 +1,16 @@
 #!/usr/bin/python3
 
 import rospy
+import random
 
 from dustbot.msg import Position, Garbage
 
 from dustbot.srv import SetDirection, SetDirectionResponse
 from dustbot.srv import LoadGarbage, LoadGarbageResponse
 
-P = 3 #Required pieces of garbage to be picked. 
+P = rospy.get_param('P') #Required pieces of garbage to be picked. 
 
-N = 10 #Number of cells per row/column.
+N = rospy.get_param('N') #Number of cells per row/column.
 
 dir = (1,0) #Assume robot would start moving to the right. 
 
@@ -19,7 +20,7 @@ picked_garbage = 0 #Counter of the picked garbage pieces.
 
 robot_position = (0,0) #Initial position is the bottom-left corner. 
 
-garbage_stack = [(2,2),(8,5),(5,8)] #Garbage cells are random cells.
+next_garbage = (random.randint(0, N-1), random.randint(0, N-1)) #Garbage cells are random cells.
 
 history = [] #Garbage cells are random cells.
 
@@ -40,21 +41,26 @@ def available_movements():
 def load_garbage_handler(req):
     rospy.loginfo(f"Picking up garnage from current cell:  {req.x},{req.y}")
     
-    global picked_garbage, garbage_stack
+    global picked_garbage, next_garbage
 
     #Here we should check rif there is garbage in the current cell.
-    print(garbage_stack)
-    allowed = garbage_stack[0][0] == req.x and garbage_stack[0][1] == req.y
+    print(next_garbage)
+    allowed = next_garbage[0] == req.x and next_garbage[1] == req.y
 
     if allowed: 
         picked_garbage += 1
-        garbage_stack.pop(0)
-        print("LOADING GARBAGE", garbage_stack)
+        rospy.loginfo(f"Garbage being collected from cell: {next_garbage}")
         
-    if len(garbage_stack): 
-        publish_next_destination(garbage_stack[0])
+        
+    if picked_garbage < P: 
+        next_garbage = (random.randint(0,N-1), random.randint(0,N-1))
+        publish_next_destination(next_garbage)
     else: 
-        rospy.loginfo("We are grateful that you finished the tasks.")
+        rospy.loginfo("|----------------------------------------------------------|")
+        rospy.loginfo("|                                                          |")
+        rospy.loginfo("| Congratulations, your effort made world a cleaner place! |")
+        rospy.loginfo("|                                                          |")
+        rospy.loginfo("|----------------------------------------------------------|")
 
     return LoadGarbageResponse(outcome=allowed)
 
@@ -92,7 +98,7 @@ def set_direction_server():
 # Should be called at the beginning of the node execution and when the client notify the 
 # "cleance" of the last provided destination.
 def publish_next_destination(next_dest):
-    pub = rospy.Publisher("current_destination", Garbage, queue_size=1)
+    pub = rospy.Publisher("current_destination", Position, queue_size=1)
 
     if not rospy.is_shutdown(): 
         dest_str = f"Next garbage at ({next_dest[0]}, {next_dest[1]})"
@@ -117,13 +123,13 @@ def publish_robot_position(pos):
 def world(): 
     rospy.init_node("world")
 
-    global N, P, dir, picked_garbage, robot_position, garbage_stack, history
+    global N, P, dir, picked_garbage, robot_position, next_garbage, history
 
     rate = rospy.Rate(1) # 1 Hz
     # Do stuff, maybe in a while loop
 
     publish_robot_position(robot_position)
-    publish_next_destination(garbage_stack[0])
+    publish_next_destination(next_garbage)
 
     set_direction_server()
     load_garbage_server()
@@ -135,8 +141,7 @@ def world():
         # Let's move the robot in the setted direction
         am = available_movements()
 
-        if len(garbage_stack) == 0:
-            rospy.info("Congratulations, world is a cleaner place.")
+        if picked_garbage == P:
             return
 
         # Security direction checker
@@ -152,7 +157,7 @@ def world():
         # Actually make the robot move
         robot_position = (robot_position[0] + dir[0], robot_position[1] + dir[1])
         publish_robot_position(robot_position)
-        # publish_next_destination(garbage_stack[0])
+        # publish_next_destination(next_garbage[0])
 
         rate.sleep() # Sleeps for 1/rate sec    
 
