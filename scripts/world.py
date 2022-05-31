@@ -190,9 +190,6 @@ def world():
 
 # Main execution flow of the "world" node. 
 if __name__ == "__main__":
-    N = 10 # TODO read from rosparam
-    P = 3  # TODO read from rosparam
-
     try: 
         world()
     except rospy.ROSInterruptException:
