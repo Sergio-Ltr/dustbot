@@ -1,6 +1,6 @@
 <launch>
-    <node name="world_node" pkg="dustbot"  type="world.py" output="screen">
-        <rosparam command="load" file="$(find dustbot)/config/grid.yaml" />
-    </node> 
+    <rosparam file="$(find dustbot)/config/grid.yaml" />
     <node name="robot_node" pkg="dustbot"  type="robot.py" output="screen" />
+    <node name="world_node" pkg="dustbot"  type="world.py" output="screen" />
+   
 </launch>
