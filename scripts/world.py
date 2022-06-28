@@ -6,7 +6,7 @@ import random
 
 from utils import dir_to_cardinal
 
-from dustbot.msg import Position,Garbage
+from dustbot.msg import Position
 
 from dustbot.srv import SetDirection, SetDirectionResponse
 from dustbot.srv import LoadGarbage, LoadGarbageResponse
@@ -56,7 +56,7 @@ def publish_next_destination(next_dest):
     if not rospy.is_shutdown(): 
         rospy.loginfo(f"NEXT GARBAGE AT CELL: {next_dest}")
     
-        dest = Garbage( x = next_dest[0], y = next_dest[1])
+        dest = Position( x = next_dest[0], y = next_dest[1])
         pub.publish(dest)
 
 
