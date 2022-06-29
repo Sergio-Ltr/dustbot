@@ -1,22 +1,20 @@
 #!/usr/bin/python3
 
-from time import sleep
 import rospy
 import random
 
-from utils import dir_to_cardinal
+from src.utils import dir_to_cardinal
 
 from dustbot.msg import Position
 
 from dustbot.srv import SetDirection, SetDirectionResponse
 from dustbot.srv import LoadGarbage, LoadGarbageResponse
 
+
 P = rospy.get_param('P') #Required pieces of garbage to be picked. 
 N = rospy.get_param('N') #Number of cells per row/column.
 
 dir = (1,0) #Assume robot would start moving to the right. 
-
-obstacles = [] #Not used, maybe will be implemented in the future. 
 
 picked_garbage = 0 #Counter of the picked garbage pieces. 
 
@@ -159,7 +157,7 @@ def world():
     garbage_noticed = False
 
     # Repat at each "rate"
-    while picked_garbage < P: 
+    while picked_garbage < P and not rospy.is_shutdown(): 
         if not garbage_noticed: 
             publish_next_destination(next_garbage)
             garbage_noticed = True
