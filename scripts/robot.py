@@ -1,7 +1,12 @@
 #!/usr/bin/python3
+import os,sys
 import rospy
 
-from utils import cardinal_to_dir
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
+from src.utils import cardinal_to_dir
 
 from dustbot.msg import Position
 from dustbot.srv import SetDirection, LoadGarbage

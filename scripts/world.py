@@ -1,9 +1,13 @@
 #!/usr/bin/python3
-import os
+import os,sys
 import rospy
 import random
 
-from utils import dir_to_cardinal, final_log
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
+from src.utils import dir_to_cardinal, final_log
 
 from dustbot.msg import Position
 
@@ -19,10 +23,10 @@ class World():
         self.posTopic = rospy.Publisher("global_position", Position, queue_size=1)
         self.destTopic = rospy.Publisher("current_destination", Position, queue_size=1)
 
-        self.robotPos = initial_cell
         self.robotDir = None
         self.garbage = None
 
+        self.robotPos = initial_cell
         self.pickedGarbage = 0
 
 
@@ -135,7 +139,7 @@ class World():
             allowed = not self.check_blocks(new_dir)
 
             if allowed:
-                rospy.loginfo(f"DIRECTION SUCCESSFULLY CHANGED TO {dir_to_cardinal(new_dir)}!")
+                rospy.loginfo(f" DIRECTION SUCCESSFULLY CHANGED TO {dir_to_cardinal(new_dir)}!")
                 self.robotDir = new_dir
                 return SetDirectionResponse(True)
             else: 

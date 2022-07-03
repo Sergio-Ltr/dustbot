@@ -17,7 +17,7 @@ def cardinal_to_dir(cardinal):
         return (0,-1)
     elif cardinal == 'WEST':
         return (-1,0)
-    else: #cardianl = 'EAST'
+    else: #cardianl == 'EAST'
         return (1,0)
 
 def final_log(): 
