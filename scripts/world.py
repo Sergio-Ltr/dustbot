@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import os
 import rospy
 import random
 
@@ -16,8 +16,8 @@ class World():
         self.P = P
         self.N = N
 
-        self.posTopic = rospy.Publisher("global_position", Position)
-        self.destTopic = rospy.Publisher("current_destination", Position)
+        self.posTopic = rospy.Publisher("global_position", Position, queue_size=1)
+        self.destTopic = rospy.Publisher("current_destination", Position, queue_size=1)
 
         self.robotPos = initial_cell
         self.robotDir = None
@@ -31,11 +31,11 @@ class World():
         N = self.N
         robotPos = self.robotPos
 
-        return [      
-            robotPos[1] < N - 1, # Can go up?
-            robotPos[1] > 0,     # Can go down?
+        return [
             robotPos[0] < N - 1, # Can go right?
-            robotPos[0] > 0      # Can go left?
+            robotPos[0] > 0,     # Can go left?      
+            robotPos[1] < N - 1, # Can go up?
+            robotPos[1] > 0      # Can go down?
         ]
 
 
@@ -43,10 +43,17 @@ class World():
     def check_blocks(self, dir): 
         am = self.available_movements()
 
-        blocked_x = (dir[0] == 1 and not am[2]) or (dir[0] == -1 and not am[3])
-        blocked_y = (dir[1] == 1 and not am[0]) or (dir[1] == -1 and not am[1])  
-
-        return blocked_x and blocked_y
+        blocks = [
+            (dir[0] == 1 and not am[0]),
+            (dir[0] == -1 and not am[1]),
+            (dir[1] == 1 and not am[2]),
+            (dir[1] == -1 and not am[3])
+        ]
+        
+        blocked_x = blocks[0] or blocks[1] 
+        blocked_y = blocks[2] or blocks[3]
+       
+        return blocked_x or blocked_y
 
 
     # Generate a random coordinates pair for the next garbage and publish it.
@@ -55,10 +62,11 @@ class World():
     
 
     def moveRobot(self):
-        #@TODO check for wall crash here. 
-        self.robotPos[0] += self.robotDir[0]
-        self.robotPos[1] += self.robotDir[1]
-        self.update_robot_position(self.robotPos)
+        dir = self.robotDir
+        if not self.check_blocks(dir):
+            self.robotPos[0] += dir[0]
+            self.robotPos[1] += dir[1]
+            self.update_robot_position(self.robotPos)
         
 
     # Publish on the "global_position" topic the coordinates of the cell where dustbot currently is. 
@@ -102,7 +110,8 @@ class World():
                 #When entering this block, after the celebrating logs, program should stop.
                 for log in final_log(): 
                     rospy.loginfo(log)
-                rospy.signal_shutdown("All garbage has been picked")
+
+                os.system("rosnode kill robot_node") #Maybe too naive?
 
             return LoadGarbageResponse(True)
 
@@ -115,8 +124,6 @@ class World():
             current_dir = self.robotDir
             new_dir = [req.x, req.y]
 
-            print("NEW DIRECTION:", new_dir)
-
             #This block is present as a defense, but client should never send a request like this!
             if current_dir != None and current_dir == new_dir: 
                 rospy.loginfo(f"{dir_to_cardinal(new_dir)} WAS ALREADY SET AS THE CURRENT DIRECTION.")
@@ -128,7 +135,7 @@ class World():
             allowed = not self.check_blocks(new_dir)
 
             if allowed:
-                rospy.loginfo(f"( DIRECTION SUCCESSFULLY CHANGED TO {dir_to_cardinal(new_dir)}!")
+                rospy.loginfo(f"DIRECTION SUCCESSFULLY CHANGED TO {dir_to_cardinal(new_dir)}!")
                 self.robotDir = new_dir
                 return SetDirectionResponse(True)
             else: 
@@ -158,7 +165,6 @@ class World():
         while self.pickedGarbage < P and not rospy.is_shutdown(): 
             # Once per second, make the robot move
             self.moveRobot()
-            self.update_robot_position(self.robotPos)
 
             rate.sleep()
 
