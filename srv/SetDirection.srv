@@ -1,3 +1,4 @@
-str dir  
+int64 x
+int64 y
 ---
 bool outcome 
