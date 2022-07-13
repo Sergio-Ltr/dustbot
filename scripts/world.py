@@ -70,15 +70,13 @@ class World():
         if not self.check_blocks(dir):
             self.robotPos[0] += dir[0]
             self.robotPos[1] += dir[1]
-        if dir == [0,0]: 
-            self.is_garbage_changed = True
         
 
     # Publish on the "global_position" topic the coordinates of the cell where dustbot currently is. 
     def publish_robot_position(self, pos):
         if not rospy.is_shutdown(): 
             rospy.loginfo(f"CURRENT ROBOT POSITION: {pos}")
-            self.posTopic.publish(Position(x = pos[0], y = pos[1]))
+            self.posTopic.publish(Position(pos))
 
 
     # Publish on the "current_destination" topic the coordinates of the grbage.
@@ -86,7 +84,7 @@ class World():
         dest = self.garbage
         if not rospy.is_shutdown(): 
             rospy.loginfo(f"NEXT GARBAGE AT CELL: {dest}")
-            self.destTopic.publish(Position( x = dest[0], y = dest[1]))
+            self.destTopic.publish(Position(dest))
 
 
     # Builds and return a handler for the load garbage service. 
@@ -104,7 +102,7 @@ class World():
             rospy.loginfo(f"CELL: {garbage} - GARBAGE CORRECTLY COLLECTED!")
         else: 
             rospy.loginfo(f"CELL: {garbage} - UNABLE TO COLLECTED ANY GARBAGE!")
-            return LoadGarbageResponse(False)
+            return LoadGarbageResponse(False, False)
 
         #If it wasn't the last garbage you are supposed to collect, get the next destination
         if self.pickedGarbage < self.P: 
@@ -116,7 +114,7 @@ class World():
             for log in final_log(): 
                 rospy.loginfo(log)
 
-        return LoadGarbageResponse(True)
+        return LoadGarbageResponse(True, self.pickedGarbage >= P)
 
 
     # Builds and return a handler for the set direction service. 
@@ -161,7 +159,7 @@ class World():
             # Once per second, make the robot move
             self.moveRobot()
             self.publish_robot_position(self.robotPos)
-            if self.is_garbage_changed: 
+            if self.is_garbage_changed or self.robotDir == [0,0]: 
                 self.publish_next_destination()
                 self.is_garbage_changed = False
 
@@ -173,7 +171,7 @@ if __name__ == "__main__":
     try: 
         P = rospy.get_param('P') #Required pieces of garbage to be picked. 
         N = rospy.get_param('N') #Number of cells per row/column.
-
+    
         World( "world", 1, P, N).begin()
     except rospy.ROSInterruptException:
         pass

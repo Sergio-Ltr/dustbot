@@ -1,2 +1,3 @@
 ---
 bool outcome 
+bool is_last

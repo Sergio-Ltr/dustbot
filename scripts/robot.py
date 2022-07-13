@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from enum import Enum
+from cmath import inf
 import rospy
 
 
@@ -8,7 +8,7 @@ from dustbot.srv import SetDirection, LoadGarbage
 
 
 class Robot: 
-    def __init__(self, name, initial_cell = [0,0], initial_dir = 'EAST', initial_dest=[0,0]): 
+    def __init__(self, name, initial_cell = [0,0], initial_dir = 'EAST', initial_dest=[inf,inf]): 
         self.name = name
 
         self.pos = initial_cell
@@ -26,8 +26,7 @@ class Robot:
             
             if resp.outcome: 
                 self.dir = dir
-
-            return resp.outcome 
+                print(f"{rospy.get_caller_id()} direction successfully changed.")
 
         except rospy.ServiceException as _: 
             rospy.loginfo(f"{rospy.get_caller_id()} Call to set_direction interrupted")
@@ -41,7 +40,12 @@ class Robot:
         try:
             resp =  self.load_garbage_client()
 
-            return resp.outcome 
+            if resp.outcome:
+                print(f"{rospy.get_caller_id()} garbage successfully loaded.")
+
+            if resp.is_last: 
+                print(f"{rospy.get_caller_id()} it's time to stop.")
+                rospy.signal_shutdown("Task is ended")
 
         except rospy.ServiceException as _: 
             rospy.loginfo(f"{rospy.get_caller_id()} Call to load_garbage interrupted")
@@ -52,6 +56,7 @@ class Robot:
         # Get closer to the garbagre horizontally, if not aligned
         if self.dest[0] > self.pos[0]: 
             self.set_direction("EAST")
+
         elif self.dest[0] < self.pos[0]: 
             self.set_direction("WEST")
 
@@ -68,7 +73,7 @@ class Robot:
     
     # Update the current position according to what published on the world topic.
     def pos_callback(self, msg):
-        self.pos = [msg.x, msg.y]
+        self.pos = msg.pos
 
         rospy.loginfo(f"{rospy.get_caller_id()}: currently in cell {self.pos}")
 
@@ -76,8 +81,8 @@ class Robot:
 
 
     # Update the current destination when a new one is published
-    def dest_callback(self, msg ):
-        self.dest = [msg.x, msg.y]
+    def dest_callback(self, msg):
+        self.dest = msg.pos
 
         rospy.loginfo(f"{rospy.get_caller_id()}: pointing to cell {self.dest}")
 
@@ -90,8 +95,8 @@ class Robot:
         self.set_direction_client = rospy.ServiceProxy("set_direction", SetDirection)
         self.load_garbage_client = rospy.ServiceProxy("load_garbage", LoadGarbage)
 
-        rospy.Subscriber("global_position", Position, self.pos_callback)
         rospy.Subscriber("current_destination", Position, self.dest_callback)
+        rospy.Subscriber("global_position", Position, self.pos_callback)
 
         rospy.spin()
 
