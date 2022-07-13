@@ -101,7 +101,7 @@ class World():
             self.pickedGarbage += 1
             rospy.loginfo(f"CELL: {garbage} - GARBAGE CORRECTLY COLLECTED!")
         else: 
-            rospy.loginfo(f"CELL: {garbage} - UNABLE TO COLLECTED ANY GARBAGE!")
+            rospy.logwarn(f"CELL: {garbage} - UNABLE TO COLLECTED ANY GARBAGE!")
             return LoadGarbageResponse(False, False)
 
         #If it wasn't the last garbage you are supposed to collect, get the next destination
@@ -137,7 +137,7 @@ class World():
             self.robotDir = new_dir
             return SetDirectionResponse(True)
         else: 
-            rospy.loginfo(f"UNABLE TO CHANGE DIRECTION TO {req.dir} - WALL DETECTED!")
+            rospy.logwarn(f"UNABLE TO CHANGE DIRECTION TO {req.dir} - WALL DETECTED!")
             return SetDirectionResponse(False)
 
 

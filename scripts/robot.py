@@ -26,10 +26,10 @@ class Robot:
             
             if resp.outcome: 
                 self.dir = dir
-                print(f"{rospy.get_caller_id()} direction successfully changed.")
+                rospy.loginfo(f"{rospy.get_caller_id()} direction successfully changed.")
 
         except rospy.ServiceException as _: 
-            rospy.loginfo(f"{rospy.get_caller_id()} Call to set_direction interrupted")
+            rospy.logwarn(f"{rospy.get_caller_id()} Call to set_direction interrupted")
 
 
     # Call the load garbage service in order to actually clean the current cell. 
@@ -41,14 +41,14 @@ class Robot:
             resp =  self.load_garbage_client()
 
             if resp.outcome:
-                print(f"{rospy.get_caller_id()} garbage successfully loaded.")
+                rospy.loginfo(f"{rospy.get_caller_id()} garbage successfully loaded.")
 
             if resp.is_last: 
-                print(f"{rospy.get_caller_id()} it's time to stop.")
+                rospy.loginfo(f"{rospy.get_caller_id()} it's time to stop.")
                 rospy.signal_shutdown("Task is ended")
 
         except rospy.ServiceException as _: 
-            rospy.loginfo(f"{rospy.get_caller_id()} Call to load_garbage interrupted")
+            rospy.logwarn(f"{rospy.get_caller_id()} Call to load_garbage interrupted")
 
 
     # Decide next action: in which direction to go or to load garbage.
