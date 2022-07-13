@@ -10,7 +10,6 @@ def dir_to_cardinal(dir):
     return cardinal
 
 def cardinal_to_dir(cardinal): 
-
     if cardinal == 'NORTH':
         return (0,1)
     elif cardinal == 'SOUTH':

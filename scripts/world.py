@@ -1,13 +1,8 @@
 #!/usr/bin/python3
-import os,sys
 import rospy
 import random
 
-currentdir = os.path.dirname(os.path.realpath(__file__))
-parentdir = os.path.dirname(currentdir)
-sys.path.append(parentdir)
-
-from src.utils import dir_to_cardinal, final_log
+from dustbot.utils import cardinal_to_dir, dir_to_cardinal, final_log
 
 from dustbot.msg import Position
 
@@ -16,21 +11,26 @@ from dustbot.srv import LoadGarbage, LoadGarbageResponse
 
 
 class World(): 
-    def __init__(self, P, N, initial_cell = [0,0]):
+    def __init__(self, name, rate, P, N, initial_cell = [0,0]):
+        self.name = name
+        self.rate = rate
+
         self.P = P
         self.N = N
+
+        self.robotDir = [0, 0]
+        self.garbage =  [0, 0] #None
+
+        self.robotPos = initial_cell
+        self.pickedGarbage = 0
+        
+        self.is_garbage_changed = True
 
         self.posTopic = rospy.Publisher("global_position", Position, queue_size=1)
         self.destTopic = rospy.Publisher("current_destination", Position, queue_size=1)
 
-        self.robotDir = None
-        self.garbage = None
 
-        self.robotPos = initial_cell
-        self.pickedGarbage = 0
-
-
-    # Return four boolean, as the availability of respectively "UP - DOWN - RIGHT - LEFT" directions.
+    # Return four boolean, as the availability of respectively "RIGHT - LEFT - UP - DOWN  RIGHT - LEFT" directions.
     def available_movements(self): 
         N = self.N
         robotPos = self.robotPos
@@ -70,18 +70,19 @@ class World():
         if not self.check_blocks(dir):
             self.robotPos[0] += dir[0]
             self.robotPos[1] += dir[1]
-            self.update_robot_position(self.robotPos)
+        if dir == [0,0]: 
+            self.is_garbage_changed = True
         
 
     # Publish on the "global_position" topic the coordinates of the cell where dustbot currently is. 
-    def update_robot_position(self, pos):
+    def publish_robot_position(self, pos):
         if not rospy.is_shutdown(): 
             rospy.loginfo(f"CURRENT ROBOT POSITION: {pos}")
             self.posTopic.publish(Position(x = pos[0], y = pos[1]))
 
 
     # Publish on the "current_destination" topic the coordinates of the grbage.
-    def update_next_destination(self):
+    def publish_next_destination(self):
         dest = self.garbage
         if not rospy.is_shutdown(): 
             rospy.loginfo(f"NEXT GARBAGE AT CELL: {dest}")
@@ -89,86 +90,80 @@ class World():
 
 
     # Builds and return a handler for the load garbage service. 
-    def load_garbage_handler(self):
-        def handler(_): 
-            pos = self.robotPos
-            garbage = self.garbage
+    def load_garbage_handler(self, _):
+        pos = self.robotPos
+        garbage = self.garbage
 
-            rospy.loginfo(f"TRYING TO PIK UP GARBAGE FROM CELL:  {pos}")
-            
-            #Here we should check if there is garbage in the current cell.
-            allowed = garbage[0] == pos[0] and garbage[1] == pos[1]
+        rospy.loginfo(f"TRYING TO PIK UP GARBAGE FROM CELL:  {pos}")
+        
+        #Here we should check if there is garbage in the current cell.
+        allowed = garbage[0] == pos[0] and garbage[1] == pos[1]
 
-            if allowed: 
-                self.pickedGarbage += 1
-                rospy.loginfo(f"CELL: {garbage} - GARBAGE CORRECTLY COLLECTED!")
-            else: 
-                rospy.loginfo(f"CELL: {garbage} - UNABLE TO COLLECTED ANY GARBAGE!")
-                return LoadGarbageResponse(False)
+        if allowed: 
+            self.pickedGarbage += 1
+            rospy.loginfo(f"CELL: {garbage} - GARBAGE CORRECTLY COLLECTED!")
+        else: 
+            rospy.loginfo(f"CELL: {garbage} - UNABLE TO COLLECTED ANY GARBAGE!")
+            return LoadGarbageResponse(False)
 
-            #If it wasn't the last garbage you are supposed to collect, get the next destination
-            if self.pickedGarbage < self.P: 
-                self.get_next_garbage()
-                self.update_next_destination()
-            else: 
-                #When entering this block, after the celebrating logs, program should stop.
-                for log in final_log(): 
-                    rospy.loginfo(log)
+        #If it wasn't the last garbage you are supposed to collect, get the next destination
+        if self.pickedGarbage < self.P: 
+            self.get_next_garbage()
+            self.is_garbage_changed = True
+            #self.publish_next_destination()
+        else: 
+            #When entering this block, after the celebrating logs, program should stop.
+            for log in final_log(): 
+                rospy.loginfo(log)
 
-                os.system("rosnode kill robot_node") #Maybe too naive?
-
-            return LoadGarbageResponse(True)
-
-        return handler
+        return LoadGarbageResponse(True)
 
 
     # Builds and return a handler for the set direction service. 
-    def set_direction_handler(self): 
-        def handler(req): 
-            current_dir = self.robotDir
-            new_dir = [req.x, req.y]
+    def set_direction_handler(self, req): 
+        current_dir = self.robotDir
+        new_dir = cardinal_to_dir(req.dir)
 
-            #This block is present as a defense, but client should never send a request like this!
-            if current_dir != None and current_dir == new_dir: 
-                rospy.loginfo(f"{dir_to_cardinal(new_dir)} WAS ALREADY SET AS THE CURRENT DIRECTION.")
-                return SetDirectionResponse(False)
-            else: 
-                rospy.loginfo(f"TRYING TO CHANGE ROBOT DIRECTION TO {dir_to_cardinal(new_dir)}.")
+        #This block is present as a defense, but client should never send a request like this!
+        if current_dir != None and current_dir == new_dir: 
+            rospy.loginfo(f"{req.dir} WAS ALREADY SET AS THE CURRENT DIRECTION.")
+            return SetDirectionResponse(False)
+        else: 
+            rospy.loginfo(f"TRYING TO CHANGE ROBOT DIRECTION TO {req.dir}.")
 
-            #Here we should check robot would not crash along some "wall".
-            allowed = not self.check_blocks(new_dir)
+        #Here we should check robot would not crash along some "wall".
+        allowed = not self.check_blocks(new_dir)
 
-            if allowed:
-                rospy.loginfo(f" DIRECTION SUCCESSFULLY CHANGED TO {dir_to_cardinal(new_dir)}!")
-                self.robotDir = new_dir
-                return SetDirectionResponse(True)
-            else: 
-                rospy.loginfo(f"UNABLE TO CHANGE DIRECTION TO {dir_to_cardinal(new_dir)} - WALL DETECTED!")
-                return SetDirectionResponse(False)
+        if allowed:
+            rospy.loginfo(f" DIRECTION SUCCESSFULLY CHANGED TO {req.dir}!")
+            self.robotDir = new_dir
+            return SetDirectionResponse(True)
+        else: 
+            rospy.loginfo(f"UNABLE TO CHANGE DIRECTION TO {req.dir} - WALL DETECTED!")
+            return SetDirectionResponse(False)
 
-        return handler
 
 
     # Start world handling loop. 
     def begin(self): 
-        rospy.init_node("world")
-        rate = rospy.Rate(1)
+        rospy.init_node(self.name)
+        rate = rospy.Rate(self.rate)
 
-        rospy.Service("load_garbage", LoadGarbage, self.load_garbage_handler())
+        rospy.Service("load_garbage", LoadGarbage, self.load_garbage_handler)
         rospy.loginfo("load_garbage service starting....")
 
-        rospy.Service("set_direction", SetDirection, self.set_direction_handler())
+        rospy.Service("set_direction", SetDirection, self.set_direction_handler)
         rospy.loginfo("set_direction service starting...")
 
         self.get_next_garbage()
-        self.update_next_destination()
-
-        rate.sleep()
-        rate.sleep()
 
         while self.pickedGarbage < P and not rospy.is_shutdown(): 
             # Once per second, make the robot move
             self.moveRobot()
+            self.publish_robot_position(self.robotPos)
+            if self.is_garbage_changed: 
+                self.publish_next_destination()
+                self.is_garbage_changed = False
 
             rate.sleep()
 
@@ -179,6 +174,6 @@ if __name__ == "__main__":
         P = rospy.get_param('P') #Required pieces of garbage to be picked. 
         N = rospy.get_param('N') #Number of cells per row/column.
 
-        World(P, N).begin()
+        World( "world", 1, P, N).begin()
     except rospy.ROSInterruptException:
         pass
