@@ -141,7 +141,7 @@ Direction changed are supposed to keep robot to the destination cell. Once there
 In case of a positive pickup, a counter for the picked pieces of garbage is incremented, in order to be compared with the setted P value as entrance condition for the main while loop. 
 
 
-## Implementatiove details
+## Implementative details
 
 Everithing described in the upper paragraph is logged during each execution. 
 For the majority of message the `rospy.loginfo` method was used. Logs from the `world_node` are always uppercase, while logs from `robot_node` and start with a preix. Unexpected behaviours are logged using the `rospy.logwarn` method. 
