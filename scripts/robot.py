@@ -8,12 +8,12 @@ from dustbot.srv import SetDirection, LoadGarbage
 
 
 class Robot: 
-    def __init__(self, name, initial_cell = [0,0], initial_dir = 'EAST', initial_dest=[inf,inf]): 
+    def __init__(self, name): 
         self.name = name
 
-        self.pos = initial_cell
-        self.dir = initial_dir
-        self.dest = initial_dest
+        self.pos = None
+        self.dir = None
+        self.dest = None
 
 
     # Call the set direction service in order to change the current moving direction. 
@@ -52,11 +52,14 @@ class Robot:
 
 
     # Decide next action: in which direction to go or to load garbage.
-    def adjustTrajectory(self): 
-        # Get closer to the garbagre horizontally, if not aligned
-        if self.dest[0] > self.pos[0]: 
-            self.set_direction("EAST")
+    def adjust_trajectory(self): 
+        # If the first destination has not been published, don't plan any direction.
+        if self.dest == None:
+            return
 
+        # Get closer to the garbagre horizontally, if not aligned
+        elif self.dest[0] > self.pos[0]: 
+            self.set_direction("EAST")
         elif self.dest[0] < self.pos[0]: 
             self.set_direction("WEST")
 
@@ -77,7 +80,7 @@ class Robot:
 
         rospy.loginfo(f"{rospy.get_caller_id()}: currently in cell {self.pos}")
 
-        self.adjustTrajectory()
+        self.adjust_trajectory()
 
 
     # Update the current destination when a new one is published
@@ -86,7 +89,7 @@ class Robot:
 
         rospy.loginfo(f"{rospy.get_caller_id()}: pointing to cell {self.dest}")
 
-        self.adjustTrajectory()
+        self.adjust_trajectory()
 
 
     def begin(self): 
