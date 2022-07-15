@@ -76,7 +76,7 @@ An exaple of output executing dustbot by lauch files follow (N = 3, P=1):
 [INFO] [1653996449.371280]: |----------------------------------------------------------|
 ```
 
-## Excercise Specification
+## Exercise Specification
 
 Dustbot 2.0,is a mobile robot, navigates a 2-dimensional NxN grid along the four directions (N-S-E-W) with a speed of one `grid-cell/s`.
 
