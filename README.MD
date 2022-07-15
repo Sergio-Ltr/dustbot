@@ -155,7 +155,7 @@ Asyncronous start of the nodes are handled, in order to obtain the same behaviou
  - if the `robot_node` would start with some delay, `world_node` would not actually move the robot  thanks to the alredy mentioned initial direction set to `[0,0]`. As long as this direction does not change, `world_node` will keep publishing, once per secondo, the current destination, along with the robot position, wich will obviously keep being the inital one.  
 
 Node terminations happen when the P-th piece of garbage is collected: 
-- `world_node` ends programmatically, exiting from the main while loop. 
--`robot_node` gets informed by the response from the `LoadGarbageService`, expressed by its second and last boolean parameter `is_last`: if is value is  true, the node is terminated using the `rospy.signal_shutdown` method. 
+- `world_node` ends programmatically, exiting from the main while loop.
+- `robot_node` gets informed by the response from the `LoadGarbageService`, expressed by its second and last boolean parameter `is_last`: if is value is  true, the node is terminated using the `rospy.signal_shutdown` method. 
 
 Additionally, the `required` flag has been set to true for the `world_node` in the lauch file, so that whenever that node temrinats, all the exectuion is stopped (including the rosmaster, implicitly starded). 
