@@ -54,7 +54,7 @@ class Robot:
     # Decide next action: in which direction to go or to load garbage.
     def adjust_trajectory(self): 
         # If the first destination has not been published, don't plan any direction.
-        if self.dest == None:
+        if self.dest is None:
             return
 
         # Get closer to the garbagre horizontally, if not aligned
